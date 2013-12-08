@@ -1,4 +1,4 @@
-f#include <WaveGen.h>
+#include <WaveGen.h>
 #include <SPI.h> 
 
 //These tables were taken from http://www.freewebs.com/the_bott/NotesTableNTSC.txt
