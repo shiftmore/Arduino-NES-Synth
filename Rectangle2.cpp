@@ -70,10 +70,11 @@ void Rectangle2::_stop(){
 uint8_t Rectangle2::_getWaveDataMessage(){ 
   	
 	uint8_t data = B00110000 + _getVolume();
+	//uint8_t data = B00100000 + _getVolume();
 
-    if( _getDutyCycle() == 3 ) return data + B11000000;
-    if( _getDutyCycle() == 2 ) return data + B10000000;
-    if( _getDutyCycle() == 1 ) return data + B01000000;
+    if( _getDutyCycle() == 3 ) return data | B11000000;
+    if( _getDutyCycle() == 2 ) return data | B10000000;
+    if( _getDutyCycle() == 1 ) return data | B01000000;
     return data + B00000000;
     
 }

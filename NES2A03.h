@@ -6,10 +6,13 @@
 #include <Rectangle2.h>
 #include <Triangle.h>
 
-#define PIN_LATCH 10							//SPI Latch Pin  
-#define PIN_PWR 3								//Pin to control power to 2A03 
-#define PIN_RST 4								//Pin to reset 2A03
- 
+#define PIN_PWR 12								//Pin to control power to 2A03 
+#define PIN_RST 13								//Pin to reset 2A03
+
+// #define PIN_LATCH 10							//SPI Latch Pin  
+// #define PIN_PWR 3								//Pin to control power to 2A03 
+// #define PIN_RST 4								//Pin to reset 2A03
+
 
 //#define QUEUE_SIZE 10
 

@@ -2,9 +2,13 @@
 #define LIB_WAVEGEN_H_
  
 #include <Arduino.h>  
+ 
 
-#define PIN_LATCH 10							//SPI Latch Pin 
-#define PIN_INTERRUPT 2 						//Interrupt pin
+#define PIN_INTERRUPT 18 //pin 46
+
+//#define PIN_INTERRUPT 2 						//Interrupt pin
+//#define PIN_LATCH 10							//SPI Latch Pin 
+
 
 #define QUEUE_SIZE 10
 
@@ -27,9 +31,11 @@ class WaveGen {
 		int _notesPressed;
 		uint8_t _noteQueue[QUEUE_SIZE];  
 
-		uint8_t _dutyCycleValue;
-		uint8_t _volume;
-		uint8_t _currentVolume;
+		int _noteOffset;
+
+		uint8_t _dutyCycleValue;		//0-3
+		uint8_t _volume; 				//0-15
+		uint8_t _currentVolume;			//0-15
 		int _fineDetune;
 
 		uint8_t _noteState;
@@ -39,6 +45,11 @@ class WaveGen {
 
 		unsigned long _timer_applyRelease;
 		unsigned long _cycle_applyRelease;
+
+		unsigned long _timer_LFO;
+		unsigned long _cycle_LFO;
+		int _LFOState;
+		uint8_t _arpNoteQueuePosition;
 
  		void init();
 
@@ -59,6 +70,8 @@ class WaveGen {
 
 		void _setAttack(uint8_t);
 
+		void _setNoteOffset(int);
+		int _getNoteOffset();
 		//void _setFineDetune(uint8_t);
 		//uint8_t _getFineDetune();
 		//uint16_t _getFineDetuneAmount(uint16_t);
@@ -73,7 +86,9 @@ class WaveGen {
 		void _applyRelease();
 		//unsigned long _cycleCheck(unsigned long, unsigned long);
 		bool _cycleCheck(unsigned long *, unsigned long);
+		bool _cycleCheck_millis(unsigned long *, unsigned long);
 
+		void _runLFO();
 		 
 	};
 

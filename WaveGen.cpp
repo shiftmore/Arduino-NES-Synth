@@ -1,5 +1,5 @@
 #include <WaveGen.h>
-#include <SPI.h> 
+//#include <SPI.h> 
 
 //These tables were taken from http://www.freewebs.com/the_bott/NotesTableNTSC.txt
 const uint8_t _noteTableHi[] = 
@@ -16,6 +16,8 @@ const uint8_t _noteTableLo[] =
   
 
 void WaveGen::init(){ 
+	pinMode(PIN_INTERRUPT,INPUT);
+
 	_noteState = NOTESTATE_OFF; 
 	_timer_applyAttack = 0;
 	_cycle_applyAttack = 1;
@@ -23,12 +25,16 @@ void WaveGen::init(){
 	_timer_applyRelease = 0;
 	_cycle_applyRelease = 1;
 
+	_noteOffset = 0;
 	_currentNote = 43; //midway
 	_wavelength = word(_getNoteHighByte(_currentNote),_getNoteLowByte(_currentNote));
  	
  	_currentBend = 0;
  	_notesPressed = 0; 
  	_fineDetune = 0;
+
+ 	
+	_arpNoteQueuePosition = 0;
 
  	_volume = 15;
 
@@ -42,11 +48,16 @@ void WaveGen::_sendAddrData(uint8_t address, uint8_t data){
 	while(digitalRead(PIN_INTERRUPT) == HIGH);  
 	while(digitalRead(PIN_INTERRUPT) == LOW);		// the interrupt worked well in a sketch, but got messy with a class. this works fine. 
 													// we are just waiting for the rising edge on this pin which is our next opportunity to write.
-   
-	digitalWrite(PIN_LATCH, LOW);					// set latch LOW to enable write
-	SPI.transfer(address);							// send address first
-	SPI.transfer(data);								// then data..
-	digitalWrite(PIN_LATCH, HIGH);					// set latch HIGH to end the write
+	//delay(10);
+	
+	PORTE = address;
+	PORTA = data;
+
+	// digitalWrite(PIN_LATCH, LOW);					// set latch LOW to enable write
+	// SPI.transfer(address);							// send address first
+	// SPI.transfer(data);								// then data..
+	// digitalWrite(PIN_LATCH, HIGH);					// set latch HIGH to end the write
+
 }
 
 /*
@@ -54,6 +65,7 @@ void WaveGen::_sendAddrData(uint8_t address, uint8_t data){
  */ 
 void WaveGen::handleNoteOn(uint8_t channel, uint8_t pitch, uint8_t velocity){
 	if(_notesPressed<QUEUE_SIZE){					// only accept additional notes if there's room in the queue
+		//_setVolume(velocity);
 		_playNote(pitch);			// play it
 		_pushNoteOnQueue(pitch); 					// keep track of it 
 	}
@@ -129,15 +141,28 @@ void WaveGen::_playNote(uint8_t note){
 	if(_noteState == NOTESTATE_OFF || _noteState == NOTESTATE_RELEASE){  
       _noteState = NOTESTATE_ATTACK; 
     } 
-	_setWavelength(word(_getNoteHighByte(note),_getNoteLowByte(note)));
+	_setWavelength(word(_getNoteHighByte(note+_getNoteOffset()),_getNoteLowByte(note+_getNoteOffset())));
 	_currentNote = note;
 }
 
-void WaveGen::_setDutyCycle(uint8_t dc){
-	//_dutyCycleValue = dc;
-	uint8_t duty = map(dc,0,127,0,3);
-	if(duty != _dutyCycleValue){ 
-		_dutyCycleValue = duty; 
+void WaveGen::_setNoteOffset(int offset){
+	if(_notesPressed > 0){
+		_setWavelength(word(_getNoteHighByte(_currentNote+_getNoteOffset()),_getNoteLowByte(_currentNote+_getNoteOffset())));
+	}
+	_noteOffset = offset;
+}
+int WaveGen::_getNoteOffset(){
+	return _noteOffset;
+}
+
+// 0	 2/14
+// 1	 4/12
+// 2	 8/ 8
+// 3	12/ 4
+void WaveGen::_setDutyCycle(uint8_t dc){ 
+	if(dc > 3) dc = 3;
+	if(dc != _dutyCycleValue){ 
+		_dutyCycleValue = dc; 
 		if(_notesPressed > 0) _sendWaveDataMessage();
 	}
 }
@@ -146,12 +171,15 @@ uint8_t WaveGen::_getDutyCycle(){
 	return _dutyCycleValue;
 }
 
+//Set Volume 0000-1111 (0-15)
 void WaveGen::_setVolume(uint8_t v){ 
-	uint8_t vol = map(v,0,127,0,15);
-	if(vol != _volume){ 
-		_volume = vol; 
+	//uint8_t vol = map(v,0,127,0,15);
+	//if(vol != _volume){ 
+	//	_volume = vol; 
+	if(v > 15) v=15;
+	_volume = v;
 		if(_notesPressed > 0) _sendWaveDataMessage();
-	}
+	//}
 }
 
 uint8_t WaveGen::_getVolume(){
@@ -193,6 +221,7 @@ uint16_t WaveGen::_getFineDetuneAmount(uint16_t wl){
 
 // Only applies to rect gens, until we implement glide/arp/vibrato
 void WaveGen::_handleNoteStates(){ 
+ 
   switch (_noteState) {
     //case NOTESTATE_TRANSITION_DECAY:
       	//applyTransDecay();
@@ -210,6 +239,21 @@ void WaveGen::_handleNoteStates(){
   
 }
  
+
+void WaveGen::_runLFO(){
+	if(_notesPressed > 0){ 
+		//if(_LFOState == HIGH){
+			_arpNoteQueuePosition = (_arpNoteQueuePosition+1)%(_notesPressed); 
+			_playNote(_noteQueue[_arpNoteQueuePosition]);
+			_LFOState = LOW;
+		//}else{
+		//	_noteState = NOTESTATE_RELEASE;
+		//	_LFOState = HIGH;
+		//	
+		//}  
+	} 
+}
+
 void WaveGen::_applyAttack(){ 
 	if(_currentVolume < _volume){ 
 		if(_cycleCheck(&_timer_applyAttack, _cycle_applyAttack)){
@@ -243,4 +287,7 @@ bool WaveGen::_cycleCheck(unsigned long *lastMicros, unsigned long cycle) {
 	else
 		return false;
 }
+
+
+
  
