@@ -35,6 +35,8 @@ void WaveGen::init(){
 
  	
 	_arpNoteQueuePosition = 0;
+	_arpDirectionAscend = true;
+	_arpStyle = ARPSTYLE_ASPLAYED;
 
  	_volume = 15;
 
@@ -116,9 +118,38 @@ uint8_t WaveGen::_getNoteHighByte(uint8_t noteTableIdx){
 /*
  * Functions to maintain the note queue
  */
+void bubble_sort(uint8_t list[], uint8_t n)
+{
+  uint8_t c, d, t;
+ 
+  for (c = 0 ; c < ( n - 1 ); c++)
+  {
+    for (d = 0 ; d < n - c - 1; d++)
+    {
+      if (list[d] > list[d+1])
+      {
+        /* Swapping */
+ 
+        t         = list[d];
+        list[d]   = list[d+1];
+        list[d+1] = t;
+      }
+    }
+  }
+} 
+void WaveGen::createSortedQueues(){
+	 for(int i=0;i<_notesPressed;i++){
+	 	_noteQueue_UP[i] = _noteQueue[i]; 
+	 }
+	 bubble_sort(_noteQueue_UP,_notesPressed); 
+}
+
 void WaveGen::_pushNoteOnQueue(uint8_t note){
 	_noteQueue[_notesPressed] = note;
+
 	_notesPressed++;
+
+	createSortedQueues();
 }
 void WaveGen::_removeNoteFromQueue(uint8_t pitch){
 	boolean found=false;
@@ -132,6 +163,8 @@ void WaveGen::_removeNoteFromQueue(uint8_t pitch){
 	}
 	_noteQueue[_notesPressed-1] = 0;
 	_notesPressed--;
+
+	createSortedQueues();
 }
 uint8_t WaveGen::_getLastNoteInQueue(){
 	return _noteQueue[_notesPressed-1]; 
@@ -240,19 +273,57 @@ void WaveGen::_handleNoteStates(){
 }
  
 
+
+
 void WaveGen::_runLFO(){
-	if(_notesPressed > 0){ 
-		//if(_LFOState == HIGH){
+	if(_notesPressed > 1){  
+		if(_notesPressed == 2 || _arpStyle == ARPSTYLE_ASPLAYED){
+			// if there are only 2 notes, we just oscillate between them..
 			_arpNoteQueuePosition = (_arpNoteQueuePosition+1)%(_notesPressed); 
 			_playNote(_noteQueue[_arpNoteQueuePosition]);
-			_LFOState = LOW;
-		//}else{
-		//	_noteState = NOTESTATE_RELEASE;
-		//	_LFOState = HIGH;
-		//	
-		//}  
+		}else{
+			
+
+			if(_arpStyle == ARPSTYLE_UP || _arpStyle == ARPSTYLE_CONVERGE){
+				_arpNoteQueuePosition = (_arpNoteQueuePosition+1)%(_notesPressed); 
+				if(_arpStyle == ARPSTYLE_UP) _playNote(_noteQueue_UP[_arpNoteQueuePosition]);
+				//else _playNote(_noteQueue_CONVERGE[_arpNoteQueuePosition]);
+			}else if(_arpStyle == ARPSTYLE_DOWN || _arpStyle == ARPSTYLE_DIVERGE){
+				_arpNoteQueuePosition = (_arpNoteQueuePosition+1)%(_notesPressed); 
+				if(_arpStyle == ARPSTYLE_DOWN) _playNote(_noteQueue_UP[_notesPressed-_arpNoteQueuePosition-1]);
+				//else _playNote(_noteQueue_CONVERGE[_arpNoteQueuePosition]);
+			}else if(_arpStyle == ARPSTYLE_UPDOWN || _arpStyle == ARPSTYLE_CONVERGEDIVERGE){
+				if(_arpNoteQueuePosition >= _notesPressed-1){
+					_arpDirectionAscend = false;
+				}else if(_arpNoteQueuePosition <= 0){
+					_arpDirectionAscend = true; 
+				}
+
+				if(_arpDirectionAscend) 
+					_arpNoteQueuePosition++;
+				else 
+					_arpNoteQueuePosition--;
+
+				if(_arpStyle == ARPSTYLE_UPDOWN) _playNote(_noteQueue_UP[_arpNoteQueuePosition]);
+				//else _playNote(_noteQueue_CONVERGE[_arpNoteQueuePosition]);
+			}
+			
+
+			//int actualNotePosition = _arpNoteQueuePosition;
+			//if(_arpStyle == ARPSTYLE_UP){
+				 //_playNote(_noteQueue_UP[_arpNoteQueuePosition]);
+				
+			//}
+			
+			//_playNote(_noteQueue[_arpNoteQueuePosition]);   
+			
+		}
+		 
+		
 	} 
 }
+
+
 
 void WaveGen::_applyAttack(){ 
 	if(_currentVolume < _volume){ 

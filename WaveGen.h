@@ -19,6 +19,15 @@
 #define NOTESTATE_SUSTAIN 2
 #define NOTESTATE_RELEASE 3
 
+#define ARPSTYLE_ASPLAYED 0
+#define ARPSTYLE_UP 1
+#define ARPSTYLE_DOWN 2
+#define ARPSTYLE_UPDOWN 3
+#define ARPSTYLE_CONVERGE 4
+#define ARPSTYLE_DIVERGE 5
+#define ARPSTYLE_CONVERGEDIVERGE 6
+#define ARPSTYLE_RANDOM 7
+
 class WaveGen {
 	public:    
 		void handleNoteOn(byte,byte,byte);
@@ -29,7 +38,10 @@ class WaveGen {
 		uint8_t _currentNote; 
 		int _currentBend;
 		int _notesPressed;
-		uint8_t _noteQueue[QUEUE_SIZE];  
+		uint8_t _noteQueue[QUEUE_SIZE];
+
+		uint8_t _noteQueue_UP[QUEUE_SIZE];  
+
 
 		int _noteOffset;
 
@@ -46,10 +58,10 @@ class WaveGen {
 		unsigned long _timer_applyRelease;
 		unsigned long _cycle_applyRelease;
 
-		unsigned long _timer_LFO;
-		unsigned long _cycle_LFO;
-		int _LFOState;
+		
 		uint8_t _arpNoteQueuePosition;
+		boolean _arpDirectionAscend;
+		uint8_t _arpStyle;
 
  		void init();
 
@@ -89,7 +101,7 @@ class WaveGen {
 		bool _cycleCheck_millis(unsigned long *, unsigned long);
 
 		void _runLFO();
-		 
+		 void createSortedQueues();
 	};
 
 #endif
