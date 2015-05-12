@@ -72,8 +72,7 @@ class WaveGen {
 		uint8_t _tremaloDepth;
 
 		uint8_t _arpNoteQueuePosition;
-		boolean _arpDirectionAscend;
-		boolean _arpDirectionChanged;
+		boolean _arpDirectionAscend; 
 		uint8_t _arpStyle;
 
  		void init();

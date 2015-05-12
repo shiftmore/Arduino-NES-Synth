@@ -352,7 +352,7 @@ unsigned long WaveGen::getTremaloCycle(){
 	// } 
 	// return (unsigned long)(((double)_LFOMillis*(double)1000)/((double)1*(((double)diff)/(double)_tremaloDepth)));
 
-	return 5000;
+	return 1;
 }
 
 void WaveGen::_applyTremalo(){  
@@ -370,7 +370,7 @@ void WaveGen::_applyTremalo(){
 
 
 			unsigned long x = micros() - _risingEdgeMicros;
-			unsigned long period_micros = (unsigned long)4*(_LFOMillis*(unsigned long)1000);
+			unsigned long period_micros = (unsigned long)2*(_LFOMillis*(unsigned long)1000);
 			double multiplier = sin(((double)x/(double)period_micros)*(double)6.28318);
 			double offset = multiplier*(double)delta;
 			uint16_t w = (uint16_t)((double)currentWavelength+offset);
