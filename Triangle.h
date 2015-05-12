@@ -8,11 +8,13 @@ class Triangle : public WaveGen{
 	public:     
 		
 	public: 
- 		virtual void _setWavelength(uint16_t);
+ 		virtual void _setWavelength(uint16_t,bool);
  		virtual void _stop(); 
  		virtual uint8_t _getWaveDataMessage();
  		virtual void _sendWaveDataMessage();
-  
+  		virtual void _applyAttack();
+ 		virtual void _applyRelease(); 
+
 	};
 
 #endif

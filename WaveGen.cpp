@@ -10,9 +10,6 @@ const uint8_t _noteTableLo[] =
 //{0xF1,0x80,0x13,0xAD,0x4D,0xF3,0x9D,0x4D,0x00,0xB8,0x75,0x35,0xF8,0xBF,0x89,0x56,0x26,0xF9,0xCE,0xA6,0x7F,0x5C,0x3A,0x1A,0xFB,0xDF,0xC4,0xAB,0x93,0x7C,0x67,0x52,0x3F,0x2D,0x1C,0x0C,0xFD,0xEF,0xE2,0xD2,0xC9,0xBD,0xB3,0xA9,0x9F,0x96,0x8E,0x86,0x7E,0x77,0x70,0x6A,0x64,0x5E,0x59,0x54,0x4F,0x4B,0x46,0x42};
 
 
-
-
-
   
 
 void WaveGen::init(){ 
@@ -25,6 +22,11 @@ void WaveGen::init(){
 	_timer_applyRelease = 0;
 	_cycle_applyRelease = 1;
 
+	_timer_applyTremalo = 0;
+	_cycle_applyTremalo = 1000;
+
+	_tremaloDepth = 1;
+
 	_noteOffset = 0;
 	_currentNote = 43; //midway
 	_wavelength = word(_getNoteHighByte(_currentNote),_getNoteLowByte(_currentNote));
@@ -33,9 +35,12 @@ void WaveGen::init(){
  	_notesPressed = 0; 
  	_fineDetune = 0;
 
+ 	_LFOMode = LFOMODE_DISABLE;
+ 	_LFOMillis = 1000;
  	
 	_arpNoteQueuePosition = 0;
 	_arpDirectionAscend = true;
+	_arpDirectionChanged = false;
 	_arpStyle = ARPSTYLE_ASPLAYED;
 
  	_volume = 15;
@@ -88,19 +93,19 @@ void WaveGen::handleNoteOff(uint8_t channel, uint8_t note, uint8_t velocity){
 }
 
 void WaveGen::handlePitchBend(uint8_t channel, int bend){
-	if(_currentBend == bend) return; 
-	if(bend == 0){
-		if(_notesPressed > 0 ) {
-			_setWavelength(word(_getNoteHighByte(_currentNote),_getNoteLowByte(_currentNote))); 
-		} 
-	}
-	int currentBendDifference = bend - _currentBend; 
-	//uint16_t currentInterval =  word(_getNoteHighByte(_currentNote-PITCHBENDRANGE),_getNoteLowByte(_currentNote-PITCHBENDRANGE)) - word(_getNoteHighByte(_currentNote+PITCHBENDRANGE),_getNoteLowByte(_currentNote+PITCHBENDRANGE));
-	int bendDetune = (int)((((float)(currentBendDifference))/(float)8193.0) * ( (float)_wavelength*0.06*6 ));
-	if(_notesPressed > 0 ) {
-		_setWavelength(_wavelength - bendDetune); 
-	}  
-	_currentBend = bend;	
+	// if(_currentBend == bend) return; 
+	// if(bend == 0){
+	// 	if(_notesPressed > 0 ) {
+	// 		_setWavelength(word(_getNoteHighByte(_currentNote),_getNoteLowByte(_currentNote))); 
+	// 	} 
+	// }
+	// int currentBendDifference = bend - _currentBend; 
+	// //uint16_t currentInterval =  word(_getNoteHighByte(_currentNote-PITCHBENDRANGE),_getNoteLowByte(_currentNote-PITCHBENDRANGE)) - word(_getNoteHighByte(_currentNote+PITCHBENDRANGE),_getNoteLowByte(_currentNote+PITCHBENDRANGE));
+	// int bendDetune = (int)((((float)(currentBendDifference))/(float)8193.0) * ( (float)_wavelength*0.06*6 ));
+	// if(_notesPressed > 0 ) {
+	// 	_setWavelength(_wavelength - bendDetune); 
+	// }  
+	// _currentBend = bend;	
 }
 
 
@@ -174,13 +179,13 @@ void WaveGen::_playNote(uint8_t note){
 	if(_noteState == NOTESTATE_OFF || _noteState == NOTESTATE_RELEASE){  
       _noteState = NOTESTATE_ATTACK; 
     } 
-	_setWavelength(word(_getNoteHighByte(note+_getNoteOffset()),_getNoteLowByte(note+_getNoteOffset())));
+	_setWavelength(word(_getNoteHighByte(note+_getNoteOffset()),_getNoteLowByte(note+_getNoteOffset())),false);
 	_currentNote = note;
 }
 
 void WaveGen::_setNoteOffset(int offset){
 	if(_notesPressed > 0){
-		_setWavelength(word(_getNoteHighByte(_currentNote+_getNoteOffset()),_getNoteLowByte(_currentNote+_getNoteOffset())));
+		_setWavelength(word(_getNoteHighByte(_currentNote+_getNoteOffset()),_getNoteLowByte(_currentNote+_getNoteOffset())),false);
 	}
 	_noteOffset = offset;
 }
@@ -269,6 +274,10 @@ void WaveGen::_handleNoteStates(){
       	_applyAttack(); 
       	break; 
   }
+
+  if(_LFOMode == LFOMODE_TREMALO){
+  	_applyTremalo();
+  }
   
 }
  
@@ -276,78 +285,103 @@ void WaveGen::_handleNoteStates(){
 
 
 void WaveGen::_runLFO(){
-	if(_notesPressed > 1){  
-		if(_notesPressed == 2 || _arpStyle == ARPSTYLE_ASPLAYED){
-			// if there are only 2 notes, we just oscillate between them..
-			_arpNoteQueuePosition = (_arpNoteQueuePosition+1)%(_notesPressed); 
-			_playNote(_noteQueue[_arpNoteQueuePosition]);
-		}else{
-			
 
-			if(_arpStyle == ARPSTYLE_UP || _arpStyle == ARPSTYLE_CONVERGE){
+	if(_LFOMode == LFOMODE_ARP){
+		if(_notesPressed > 1){  
+			if(_notesPressed == 2 || _arpStyle == ARPSTYLE_ASPLAYED){
+				// if there are only 2 notes, we just oscillate between them..
 				_arpNoteQueuePosition = (_arpNoteQueuePosition+1)%(_notesPressed); 
-				if(_arpStyle == ARPSTYLE_UP) _playNote(_noteQueue_UP[_arpNoteQueuePosition]);
-				//else _playNote(_noteQueue_CONVERGE[_arpNoteQueuePosition]);
-			}else if(_arpStyle == ARPSTYLE_DOWN || _arpStyle == ARPSTYLE_DIVERGE){
-				_arpNoteQueuePosition = (_arpNoteQueuePosition+1)%(_notesPressed); 
-				if(_arpStyle == ARPSTYLE_DOWN) _playNote(_noteQueue_UP[_notesPressed-_arpNoteQueuePosition-1]);
-				//else _playNote(_noteQueue_CONVERGE[_arpNoteQueuePosition]);
-			}else if(_arpStyle == ARPSTYLE_UPDOWN || _arpStyle == ARPSTYLE_CONVERGEDIVERGE){
-				if(_arpNoteQueuePosition >= _notesPressed-1){
-					_arpDirectionAscend = false;
-				}else if(_arpNoteQueuePosition <= 0){
-					_arpDirectionAscend = true; 
-				}
-
-				if(_arpDirectionAscend) 
-					_arpNoteQueuePosition++;
-				else 
-					_arpNoteQueuePosition--;
-
-				if(_arpStyle == ARPSTYLE_UPDOWN) _playNote(_noteQueue_UP[_arpNoteQueuePosition]);
-				//else _playNote(_noteQueue_CONVERGE[_arpNoteQueuePosition]);
-			}
-			
-
-			//int actualNotePosition = _arpNoteQueuePosition;
-			//if(_arpStyle == ARPSTYLE_UP){
-				 //_playNote(_noteQueue_UP[_arpNoteQueuePosition]);
+				_playNote(_noteQueue[_arpNoteQueuePosition]);
+			}else{
 				
-			//}
-			
-			//_playNote(_noteQueue[_arpNoteQueuePosition]);   
-			
+
+				if(_arpStyle == ARPSTYLE_UP || _arpStyle == ARPSTYLE_CONVERGE){
+					_arpNoteQueuePosition = (_arpNoteQueuePosition+1)%(_notesPressed); 
+					if(_arpStyle == ARPSTYLE_UP) _playNote(_noteQueue_UP[_arpNoteQueuePosition]);
+					//else _playNote(_noteQueue_CONVERGE[_arpNoteQueuePosition]);
+				}else if(_arpStyle == ARPSTYLE_DOWN || _arpStyle == ARPSTYLE_DIVERGE){
+					_arpNoteQueuePosition = (_arpNoteQueuePosition+1)%(_notesPressed); 
+					if(_arpStyle == ARPSTYLE_DOWN) _playNote(_noteQueue_UP[_notesPressed-_arpNoteQueuePosition-1]);
+					//else _playNote(_noteQueue_CONVERGE[_arpNoteQueuePosition]);
+				}else if(_arpStyle == ARPSTYLE_UPDOWN || _arpStyle == ARPSTYLE_CONVERGEDIVERGE){
+					if(_arpNoteQueuePosition >= _notesPressed-1){
+						_arpDirectionAscend = false;
+					}else if(_arpNoteQueuePosition <= 0){
+						_arpDirectionAscend = true; 
+					}
+
+					if(_arpDirectionAscend) 
+						_arpNoteQueuePosition++;
+					else 
+						_arpNoteQueuePosition--;
+
+					if(_arpStyle == ARPSTYLE_UPDOWN) _playNote(_noteQueue_UP[_arpNoteQueuePosition]);
+					//else _playNote(_noteQueue_CONVERGE[_arpNoteQueuePosition]);
+				} 
+			} 
+		} 
+	}else if(_LFOMode == LFOMODE_TREMALO){
+		if(_arpDirectionAscend){
+			//_sendAddrData(0x01,B11110001);						//0x87 sweep enabled, shift = 7 (1/128)
+			//_sendAddrData(0x17,0xC0);						//clock sweep immediately
+			_arpDirectionAscend = false; //flip
+			_arpDirectionChanged = true;
+			_risingEdgeMicros = micros();
+		}else{
+			//_sendAddrData(0x01,B11111001);						//sweep enabled, shift = 7 (1/128)
+			//_sendAddrData(0x17,0xC0);
+			_arpDirectionAscend = true; //flip
+			_arpDirectionChanged = true;
+		} 
+	}
+	
+}
+
+void WaveGen::setLFOMillis(unsigned long lfoMillis){
+	_LFOMillis = lfoMillis;
+}
+
+unsigned long WaveGen::getTremaloCycle(){
+	// uint16_t currentWavelength = word(_getNoteHighByte(_currentNote),_getNoteLowByte(_currentNote));
+	// uint16_t nextWavelength = word(_getNoteHighByte(_currentNote+1),_getNoteLowByte(_currentNote+1));
+	// uint16_t prevWavelength = word(_getNoteHighByte(_currentNote-1),_getNoteLowByte(_currentNote-1));
+
+	// uint16_t long diff = currentWavelength - nextWavelength;
+	// if(!_arpDirectionAscend){
+	// 	diff = prevWavelength - currentWavelength;
+	// } 
+	// return (unsigned long)(((double)_LFOMillis*(double)1000)/((double)1*(((double)diff)/(double)_tremaloDepth)));
+
+	return 5000;
+}
+
+void WaveGen::_applyTremalo(){  
+	unsigned long cycle = getTremaloCycle();
+	if(_cycleCheck(&_timer_applyTremalo, cycle)){
+		if(_notesPressed > 0 && _tremaloDepth > 0){   
+			uint16_t currentWavelength = word(_getNoteHighByte(_currentNote),_getNoteLowByte(_currentNote));
+	 		uint16_t nextWavelength = word(_getNoteHighByte(_currentNote+1),_getNoteLowByte(_currentNote+1));
+	 		uint16_t prevWavelength = word(_getNoteHighByte(_currentNote-1),_getNoteLowByte(_currentNote-1));
+			double delta = (double)(currentWavelength - nextWavelength);
+			if(!_arpDirectionAscend){
+				delta = (double)(prevWavelength - currentWavelength);
+			} 
+			delta *= (double)_tremaloDepth/(double)10;
+
+
+			unsigned long x = micros() - _risingEdgeMicros;
+			unsigned long period_micros = (unsigned long)4*(_LFOMillis*(unsigned long)1000);
+			double multiplier = sin(((double)x/(double)period_micros)*(double)6.28318);
+			double offset = multiplier*(double)delta;
+			uint16_t w = (uint16_t)((double)currentWavelength+offset);
+			if(w!=_wavelength)
+				_setWavelength(w,false);
 		}
-		 
-		
+		_arpDirectionChanged = false;
 	} 
 }
 
 
-
-void WaveGen::_applyAttack(){ 
-	if(_currentVolume < _volume){ 
-		if(_cycleCheck(&_timer_applyAttack, _cycle_applyAttack)){
-			_currentVolume++; 
-			_sendWaveDataMessage(); 
-		}
-	}else{ 
-		_noteState = NOTESTATE_SUSTAIN; 
-		_timer_applyAttack=0;
-	} 
-}
-
-void WaveGen::_applyRelease(){ 
-	if(_currentVolume > 0){ 
-		if(_cycleCheck(&_timer_applyRelease, _cycle_applyRelease)){
-			_currentVolume--; 
-			_sendWaveDataMessage(); 
-		}
-	}else{ 
-		_noteState = NOTESTATE_OFF; 
-		_timer_applyRelease=0;
-	} 
-}
 
 bool WaveGen::_cycleCheck(unsigned long *lastMicros, unsigned long cycle) {
 	unsigned long currentMicros = micros();

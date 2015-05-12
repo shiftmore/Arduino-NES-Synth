@@ -17,7 +17,8 @@ void NES2A03::init(){
 	DDRE = B11111111;
 
 	PORTE = 0x15;
-	PORTA = 0x0F; // B000001111
+	PORTA = B00000111; // enable rect 1+2 and tri only
+	//PORTA = 0x0F; // B000001111
 
 	// SPI.begin();									// enable SPI communication
 	
@@ -50,7 +51,7 @@ void NES2A03::init(){
 void NES2A03::run(){
 	rectangle1._handleNoteStates();
 	rectangle2._handleNoteStates();
- 
+ 	triangle._handleNoteStates();
 }
 
 

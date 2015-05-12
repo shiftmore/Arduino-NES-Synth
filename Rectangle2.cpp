@@ -7,9 +7,9 @@
  *	a quirk of the 2A03 is that the rect wave gen counter gets reset whenever a value is written to the high byte address register
  *	when this happens while a note is currently playing, there is a noticable click
  */
-void Rectangle2::_setWavelength(uint16_t newWavelength){
+void Rectangle2::_setWavelength(uint16_t newWavelength, bool force){
 		 
-	if(_notesPressed == 0){  					// if there are no notes currently being played 
+	if(force || _notesPressed == 0){  					// if there are no notes currently being played 
 		_sendAddrData(0x04, _getWaveDataMessage());
 		if(newWavelength != _wavelength) _sendAddrData(0x07, highByte(newWavelength));	// and set high byte directly
 	}else{										// otherwise, the wave gen should already be running (we are ignoring velocity for now) and we need to use the frequency sweep to set the high byte to avoid the click..
@@ -77,5 +77,29 @@ uint8_t Rectangle2::_getWaveDataMessage(){
     if( _getDutyCycle() == 1 ) return data | B01000000;
     return data + B00000000;
     
+}
+
+void Rectangle2::_applyAttack(){ 
+	if(_currentVolume < _volume){ 
+		if(_cycleCheck(&_timer_applyAttack, _cycle_applyAttack)){
+			_currentVolume++; 
+			_sendWaveDataMessage(); 
+		}
+	}else{ 
+		_noteState = NOTESTATE_SUSTAIN; 
+		_timer_applyAttack=0;
+	} 
+}
+
+void Rectangle2::_applyRelease(){ 
+	if(_currentVolume > 0){ 
+		if(_cycleCheck(&_timer_applyRelease, _cycle_applyRelease)){
+			_currentVolume--; 
+			_sendWaveDataMessage(); 
+		}
+	}else{ 
+		_noteState = NOTESTATE_OFF; 
+		_timer_applyRelease=0;
+	} 
 }
  

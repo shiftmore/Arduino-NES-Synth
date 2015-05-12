@@ -28,6 +28,10 @@
 #define ARPSTYLE_CONVERGEDIVERGE 6
 #define ARPSTYLE_RANDOM 7
 
+#define LFOMODE_DISABLE 0
+#define LFOMODE_ARP 1
+#define LFOMODE_TREMALO 2
+
 class WaveGen {
 	public:    
 		void handleNoteOn(byte,byte,byte);
@@ -58,9 +62,18 @@ class WaveGen {
 		unsigned long _timer_applyRelease;
 		unsigned long _cycle_applyRelease;
 
+		unsigned long _timer_applyTremalo;
+		unsigned long _cycle_applyTremalo;
 		
+		uint8_t _LFOMode;
+		unsigned long _LFOMillis;
+		unsigned long _risingEdgeMicros;
+
+		uint8_t _tremaloDepth;
+
 		uint8_t _arpNoteQueuePosition;
 		boolean _arpDirectionAscend;
+		boolean _arpDirectionChanged;
 		uint8_t _arpStyle;
 
  		void init();
@@ -88,20 +101,26 @@ class WaveGen {
 		//uint8_t _getFineDetune();
 		//uint16_t _getFineDetuneAmount(uint16_t);
 
-		virtual void _setWavelength(uint16_t);
+		virtual void _setWavelength(uint16_t,bool);
 		virtual void _stop(); 
 		virtual uint8_t _getWaveDataMessage();
 		virtual void _sendWaveDataMessage(); 
+		virtual void _applyAttack();
+		virtual void _applyRelease();
 
 		void _handleNoteStates();
-		void _applyAttack();
-		void _applyRelease();
+		
+
+		void _applyTremalo();
+
 		//unsigned long _cycleCheck(unsigned long, unsigned long);
 		bool _cycleCheck(unsigned long *, unsigned long);
 		bool _cycleCheck_millis(unsigned long *, unsigned long);
 
 		void _runLFO();
-		 void createSortedQueues();
+		void setLFOMillis(unsigned long);
+		unsigned long getTremaloCycle();
+		void createSortedQueues();
 	};
 
 #endif
