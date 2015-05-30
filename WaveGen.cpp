@@ -26,7 +26,7 @@ void WaveGen::init(){
 	_cycle_applyTremalo = 1000;
 
 	_tremaloDepth = 5;
-	_tremaloWaveForm = TREMALOWAVEFORM_SINE;
+	_tremaloWaveForm = TREMALOWAVEFORM_NOISE;
 
 	_noteOffset = 0;
 	_currentNote = 43; //midway
@@ -326,10 +326,12 @@ void WaveGen::_runLFO(){
 			//_sendAddrData(0x17,0xC0);						//clock sweep immediately
 			_arpDirectionAscend = false; //flip 
 			_risingEdgeMicros = micros();
+			_risingEdgeModFlag = true;
 		}else{
 			//_sendAddrData(0x01,B11111001);						//sweep enabled, shift = 7 (1/128)
 			//_sendAddrData(0x17,0xC0);
 			_arpDirectionAscend = true; //flip 
+			_fallingEdgeModFlag = true;
 		} 
 	}
 	
@@ -360,7 +362,7 @@ void WaveGen::_applyTremalo(){
 
 			uint16_t currentWavelength = word(_getNoteHighByte(_currentNote),_getNoteLowByte(_currentNote));
 	 		//uint16_t nextWavelength = word(_getNoteHighByte(_currentNote+2),_getNoteLowByte(_currentNote+2));
-	 		uint16_t prevWavelength = word(_getNoteHighByte(_currentNote-2),_getNoteLowByte(_currentNote-2));
+	 		uint16_t prevWavelength = word(_getNoteHighByte(_currentNote-10),_getNoteLowByte(_currentNote-10));
 
 	 		uint16_t w = currentWavelength;
 
@@ -371,27 +373,41 @@ void WaveGen::_applyTremalo(){
 				//if(!_arpDirectionAscend){
 					delta = (float)(prevWavelength - currentWavelength);
 				//} 
-				delta *= (float)_tremaloDepth/(float)10;
+				delta *= (float)_tremaloDepth/(float)100;
 
 				unsigned long x = micros() - _risingEdgeMicros;
 				unsigned long period_micros = (unsigned long)2*(_LFOMillis*(unsigned long)1000);
 				double multiplier = sin(((double)x/(double)period_micros)*(double)6.28318);
 				double offset = multiplier*(double)delta;
 				w = (uint16_t)((double)currentWavelength+offset);
+				if(w!=_wavelength) _setWavelength(w,false);
 			} 
-			else if(_tremaloWaveForm == TREMALOWAVEFORM_SQUARE){
-				
+			else if(_tremaloWaveForm == TREMALOWAVEFORM_SQUARE){ 
 
 				if(!_arpDirectionAscend){ 
 					float delta = (float)(prevWavelength - currentWavelength);
-					delta *= (float)_tremaloDepth/(float)10;
+					delta *= (float)_tremaloDepth/(float)100;
 					w = (uint16_t)((float)currentWavelength+delta); 
 				} 
 				//otherwise wavelength stays at root note
+				if(w!=_wavelength) _setWavelength(w,false);
+			}else if(_tremaloWaveForm == TREMALOWAVEFORM_NOISE){
+
+				float delta = (float)(prevWavelength - currentWavelength);
+				float adjustedDelta = delta * (float)_tremaloDepth/(float)100;
+				float randomizedDelta = ((float)random(adjustedDelta*(float)100))/((float)100);
+
+				w = (uint16_t)((float)currentWavelength)+randomizedDelta; 
+
+				if(_risingEdgeModFlag){
+					_risingEdgeModFlag = false;
+					if(w!=_wavelength)
+						_setWavelength(w,false);
+				} 
 			}
 			
 
-			if(w!=_wavelength) _setWavelength(w,false);
+			
 		} 
 	} 
 }

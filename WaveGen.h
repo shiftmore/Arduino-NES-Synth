@@ -34,6 +34,8 @@
 
 #define TREMALOWAVEFORM_SINE 1
 #define TREMALOWAVEFORM_SQUARE 2
+#define TREMALOWAVEFORM_SAW 3
+#define TREMALOWAVEFORM_NOISE 4
 
 class WaveGen {
 	public:    
@@ -78,6 +80,8 @@ class WaveGen {
 		uint8_t _arpNoteQueuePosition;
 		boolean _arpDirectionAscend; 
 		uint8_t _arpStyle;
+		boolean _risingEdgeModFlag;
+		boolean _fallingEdgeModFlag;
 
  		void init();
 
