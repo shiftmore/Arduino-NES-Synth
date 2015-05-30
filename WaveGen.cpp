@@ -25,7 +25,8 @@ void WaveGen::init(){
 	_timer_applyTremalo = 0;
 	_cycle_applyTremalo = 1000;
 
-	_tremaloDepth = 1;
+	_tremaloDepth = 5;
+	_tremaloWaveForm = TREMALOWAVEFORM_SINE;
 
 	_noteOffset = 0;
 	_currentNote = 43; //midway
@@ -39,8 +40,7 @@ void WaveGen::init(){
  	_LFOMillis = 1000;
  	
 	_arpNoteQueuePosition = 0;
-	_arpDirectionAscend = true;
-	_arpDirectionChanged = false;
+	_arpDirectionAscend = true; 
 	_arpStyle = ARPSTYLE_ASPLAYED;
 
  	_volume = 15;
@@ -324,14 +324,12 @@ void WaveGen::_runLFO(){
 		if(_arpDirectionAscend){
 			//_sendAddrData(0x01,B11110001);						//0x87 sweep enabled, shift = 7 (1/128)
 			//_sendAddrData(0x17,0xC0);						//clock sweep immediately
-			_arpDirectionAscend = false; //flip
-			_arpDirectionChanged = true;
+			_arpDirectionAscend = false; //flip 
 			_risingEdgeMicros = micros();
 		}else{
 			//_sendAddrData(0x01,B11111001);						//sweep enabled, shift = 7 (1/128)
 			//_sendAddrData(0x17,0xC0);
-			_arpDirectionAscend = true; //flip
-			_arpDirectionChanged = true;
+			_arpDirectionAscend = true; //flip 
 		} 
 	}
 	
@@ -359,25 +357,42 @@ void WaveGen::_applyTremalo(){
 	unsigned long cycle = getTremaloCycle();
 	if(_cycleCheck(&_timer_applyTremalo, cycle)){
 		if(_notesPressed > 0 && _tremaloDepth > 0){   
+
 			uint16_t currentWavelength = word(_getNoteHighByte(_currentNote),_getNoteLowByte(_currentNote));
-	 		uint16_t nextWavelength = word(_getNoteHighByte(_currentNote+1),_getNoteLowByte(_currentNote+1));
-	 		uint16_t prevWavelength = word(_getNoteHighByte(_currentNote-1),_getNoteLowByte(_currentNote-1));
-			double delta = (double)(currentWavelength - nextWavelength);
-			if(!_arpDirectionAscend){
-				delta = (double)(prevWavelength - currentWavelength);
+	 		//uint16_t nextWavelength = word(_getNoteHighByte(_currentNote+2),_getNoteLowByte(_currentNote+2));
+	 		uint16_t prevWavelength = word(_getNoteHighByte(_currentNote-2),_getNoteLowByte(_currentNote-2));
+
+	 		uint16_t w = currentWavelength;
+
+			
+
+			if(_tremaloWaveForm == TREMALOWAVEFORM_SINE){
+				float delta;// = (float)(currentWavelength - nextWavelength);
+				//if(!_arpDirectionAscend){
+					delta = (float)(prevWavelength - currentWavelength);
+				//} 
+				delta *= (float)_tremaloDepth/(float)10;
+
+				unsigned long x = micros() - _risingEdgeMicros;
+				unsigned long period_micros = (unsigned long)2*(_LFOMillis*(unsigned long)1000);
+				double multiplier = sin(((double)x/(double)period_micros)*(double)6.28318);
+				double offset = multiplier*(double)delta;
+				w = (uint16_t)((double)currentWavelength+offset);
 			} 
-			delta *= (double)_tremaloDepth/(double)10;
+			else if(_tremaloWaveForm == TREMALOWAVEFORM_SQUARE){
+				
 
+				if(!_arpDirectionAscend){ 
+					float delta = (float)(prevWavelength - currentWavelength);
+					delta *= (float)_tremaloDepth/(float)10;
+					w = (uint16_t)((float)currentWavelength+delta); 
+				} 
+				//otherwise wavelength stays at root note
+			}
+			
 
-			unsigned long x = micros() - _risingEdgeMicros;
-			unsigned long period_micros = (unsigned long)2*(_LFOMillis*(unsigned long)1000);
-			double multiplier = sin(((double)x/(double)period_micros)*(double)6.28318);
-			double offset = multiplier*(double)delta;
-			uint16_t w = (uint16_t)((double)currentWavelength+offset);
-			if(w!=_wavelength)
-				_setWavelength(w,false);
-		}
-		_arpDirectionChanged = false;
+			if(w!=_wavelength) _setWavelength(w,false);
+		} 
 	} 
 }
 

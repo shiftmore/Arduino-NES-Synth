@@ -32,6 +32,9 @@
 #define LFOMODE_ARP 1
 #define LFOMODE_TREMALO 2
 
+#define TREMALOWAVEFORM_SINE 1
+#define TREMALOWAVEFORM_SQUARE 2
+
 class WaveGen {
 	public:    
 		void handleNoteOn(byte,byte,byte);
@@ -70,6 +73,7 @@ class WaveGen {
 		unsigned long _risingEdgeMicros;
 
 		uint8_t _tremaloDepth;
+		uint8_t _tremaloWaveForm;
 
 		uint8_t _arpNoteQueuePosition;
 		boolean _arpDirectionAscend; 
