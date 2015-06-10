@@ -26,7 +26,8 @@ void WaveGen::init(){
 	_cycle_applyTremalo = 1000;
 
 	_tremaloDepth = 5;
-	_tremaloWaveForm = TREMALOWAVEFORM_NOISE;
+	_tremaloWaveForm = TREMALOWAVEFORM_SQUARE;
+	_modMode = MOD_VIBRATO;
 
 	_noteOffset = 0;
 	_currentNote = 43; //midway
@@ -234,6 +235,15 @@ void WaveGen::_setAttack(uint8_t a){
 	//}
 }
 
+void WaveGen::_setRelease(uint8_t r){ 
+	unsigned long rls = 0;
+	if(r > 0) rls = map(r,0,127,0,100000);
+	//if(vol != _volume){ 
+		_cycle_applyRelease = rls; 
+	//	if(_notesPressed > 0) _sendWaveDataMessage();
+	//}
+}
+
 /*
 void WaveGen::_setFineDetune(uint8_t fd){ 
 	int mapped_fd = fd;//map(fd,0,127,0,100);
@@ -369,28 +379,70 @@ void WaveGen::_applyTremalo(){
 			
 
 			if(_tremaloWaveForm == TREMALOWAVEFORM_SINE){
-				float delta;// = (float)(currentWavelength - nextWavelength);
-				//if(!_arpDirectionAscend){
-					delta = (float)(prevWavelength - currentWavelength);
-				//} 
-				delta *= (float)_tremaloDepth/(float)100;
+
+				
 
 				unsigned long x = micros() - _risingEdgeMicros;
 				unsigned long period_micros = (unsigned long)2*(_LFOMillis*(unsigned long)1000);
 				double multiplier = sin(((double)x/(double)period_micros)*(double)6.28318);
-				double offset = multiplier*(double)delta;
-				w = (uint16_t)((double)currentWavelength+offset);
-				if(w!=_wavelength) _setWavelength(w,false);
+
+				if(_modMode == MOD_VIBRATO){
+					// float delta = (float)_volume; // for now, should be _volume, i believe..
+					// delta *= (float)_tremaloDepth/(float)100;
+					// double offset = multiplier*(double)delta;
+
+					// // oscillate _currentVolume from _volume-offset to _volume
+					// uint8_t v = _volume;
+					// v = (uint8_t)((double)_volume-offset);
+
+
+					// if(v!=_currentVolume){
+					// 	_currentVolume = v;
+					// 	if(_notesPressed > 0) 
+					// 		_sendWaveDataMessage();
+					// }
+				}else{
+					float  delta = (float)(prevWavelength - currentWavelength); 
+					delta *= (float)_tremaloDepth/(float)100;
+					double offset = multiplier*(double)delta;
+					w = (uint16_t)((double)currentWavelength+offset);
+					if(w!=_wavelength) _setWavelength(w,false);
+				}
+
+				
+
 			} 
 			else if(_tremaloWaveForm == TREMALOWAVEFORM_SQUARE){ 
 
-				if(!_arpDirectionAscend){ 
-					float delta = (float)(prevWavelength - currentWavelength);
+				if(_modMode == MOD_VIBRATO){
+					float delta = (float)15; // for now, should be _volume, i believe..
 					delta *= (float)_tremaloDepth/(float)100;
-					w = (uint16_t)((float)currentWavelength+delta); 
-				} 
-				//otherwise wavelength stays at root note
-				if(w!=_wavelength) _setWavelength(w,false);
+
+					uint8_t v = _volume;
+
+					if(!_arpDirectionAscend){  
+						v = (uint8_t)((float)_volume-delta);
+					}
+					//otherwise set volume back to normal
+					
+
+					if(v!=_currentVolume){
+						_currentVolume = v;
+						if(_notesPressed > 0) 
+							_sendWaveDataMessage();
+					}
+				}else{
+					if(!_arpDirectionAscend){ 
+						float delta = (float)(prevWavelength - currentWavelength);
+						delta *= (float)_tremaloDepth/(float)100;
+						w = (uint16_t)((float)currentWavelength+delta); 
+					} 
+					//otherwise wavelength stays at root note
+					if(w!=_wavelength) _setWavelength(w,false);
+				}
+
+			}else if(_tremaloWaveForm == TREMALOWAVEFORM_SAW){
+				// do something
 			}else if(_tremaloWaveForm == TREMALOWAVEFORM_NOISE){
 
 				float delta = (float)(prevWavelength - currentWavelength);

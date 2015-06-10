@@ -37,6 +37,9 @@
 #define TREMALOWAVEFORM_SAW 3
 #define TREMALOWAVEFORM_NOISE 4
 
+#define MOD_TREMALO 0
+#define MOD_VIBRATO 1
+
 class WaveGen {
 	public:    
 		void handleNoteOn(byte,byte,byte);
@@ -83,6 +86,8 @@ class WaveGen {
 		boolean _risingEdgeModFlag;
 		boolean _fallingEdgeModFlag;
 
+		uint8_t _modMode;
+
  		void init();
 
 		void _sendAddrData(uint8_t,uint8_t);
@@ -101,6 +106,7 @@ class WaveGen {
 		uint8_t _getVolume();
 
 		void _setAttack(uint8_t);
+		void _setRelease(uint8_t);
 
 		void _setNoteOffset(int);
 		int _getNoteOffset();
