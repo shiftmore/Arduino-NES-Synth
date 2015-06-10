@@ -26,7 +26,7 @@ void WaveGen::init(){
 	_cycle_applyTremalo = 1000;
 
 	_tremaloDepth = 5;
-	_tremaloWaveForm = TREMALOWAVEFORM_SQUARE;
+	_tremaloWaveForm = MODWAVEFORM_SQUARE;
 	_modMode = MOD_VIBRATO;
 
 	_noteOffset = 0;
@@ -285,7 +285,7 @@ void WaveGen::_handleNoteStates(){
       	break; 
   }
 
-  if(_LFOMode == LFOMODE_TREMALO){
+  if(_LFOMode == LFOMODE_MOD){
   	_applyTremalo();
   }
   
@@ -330,7 +330,7 @@ void WaveGen::_runLFO(){
 				} 
 			} 
 		} 
-	}else if(_LFOMode == LFOMODE_TREMALO){
+	}else if(_LFOMode == LFOMODE_MOD){
 		if(_arpDirectionAscend){
 			//_sendAddrData(0x01,B11110001);						//0x87 sweep enabled, shift = 7 (1/128)
 			//_sendAddrData(0x17,0xC0);						//clock sweep immediately
@@ -378,7 +378,7 @@ void WaveGen::_applyTremalo(){
 
 			
 
-			if(_tremaloWaveForm == TREMALOWAVEFORM_SINE){
+			if(_tremaloWaveForm == MODWAVEFORM_SINE){
 
 				
 
@@ -412,7 +412,7 @@ void WaveGen::_applyTremalo(){
 				
 
 			} 
-			else if(_tremaloWaveForm == TREMALOWAVEFORM_SQUARE){ 
+			else if(_tremaloWaveForm == MODWAVEFORM_SQUARE){ 
 
 				if(_modMode == MOD_VIBRATO){
 					float delta = (float)15; // for now, should be _volume, i believe..
@@ -441,9 +441,9 @@ void WaveGen::_applyTremalo(){
 					if(w!=_wavelength) _setWavelength(w,false);
 				}
 
-			}else if(_tremaloWaveForm == TREMALOWAVEFORM_SAW){
+			}else if(_tremaloWaveForm == MODWAVEFORM_SAW){
 				// do something
-			}else if(_tremaloWaveForm == TREMALOWAVEFORM_NOISE){
+			}else if(_tremaloWaveForm == MODWAVEFORM_NOISE){
 
 				float delta = (float)(prevWavelength - currentWavelength);
 				float adjustedDelta = delta * (float)_tremaloDepth/(float)100;
