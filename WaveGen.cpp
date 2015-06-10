@@ -22,11 +22,11 @@ void WaveGen::init(){
 	_timer_applyRelease = 0;
 	_cycle_applyRelease = 1;
 
-	_timer_applyTremalo = 0;
-	_cycle_applyTremalo = 1000;
+	_timer_applyMod = 0;
+	_cycle_applyMod = 1000;
 
-	_tremaloDepth = 5;
-	_tremaloWaveForm = MODWAVEFORM_SQUARE;
+	_modDepth = 5;
+	_modWaveForm = MODWAVEFORM_SQUARE;
 	_modMode = MOD_VIBRATO;
 
 	_noteOffset = 0;
@@ -286,7 +286,7 @@ void WaveGen::_handleNoteStates(){
   }
 
   if(_LFOMode == LFOMODE_MOD){
-  	_applyTremalo();
+  	_applyMod();
   }
   
 }
@@ -351,7 +351,7 @@ void WaveGen::setLFOMillis(unsigned long lfoMillis){
 	_LFOMillis = lfoMillis;
 }
 
-unsigned long WaveGen::getTremaloCycle(){
+unsigned long WaveGen::getModCycle(){
 	// uint16_t currentWavelength = word(_getNoteHighByte(_currentNote),_getNoteLowByte(_currentNote));
 	// uint16_t nextWavelength = word(_getNoteHighByte(_currentNote+1),_getNoteLowByte(_currentNote+1));
 	// uint16_t prevWavelength = word(_getNoteHighByte(_currentNote-1),_getNoteLowByte(_currentNote-1));
@@ -365,10 +365,10 @@ unsigned long WaveGen::getTremaloCycle(){
 	return 1;
 }
 
-void WaveGen::_applyTremalo(){  
-	unsigned long cycle = getTremaloCycle();
-	if(_cycleCheck(&_timer_applyTremalo, cycle)){
-		if(_notesPressed > 0 && _tremaloDepth > 0){   
+void WaveGen::_applyMod(){  
+	unsigned long cycle = getModCycle();
+	if(_cycleCheck(&_timer_applyMod, cycle)){
+		if(_notesPressed > 0 && _modDepth > 0){   
 
 			uint16_t currentWavelength = word(_getNoteHighByte(_currentNote),_getNoteLowByte(_currentNote));
 	 		//uint16_t nextWavelength = word(_getNoteHighByte(_currentNote+2),_getNoteLowByte(_currentNote+2));
@@ -378,7 +378,7 @@ void WaveGen::_applyTremalo(){
 
 			
 
-			if(_tremaloWaveForm == MODWAVEFORM_SINE){
+			if(_modWaveForm == MODWAVEFORM_SINE){
 
 				
 
@@ -403,7 +403,7 @@ void WaveGen::_applyTremalo(){
 					// }
 				}else{
 					float  delta = (float)(prevWavelength - currentWavelength); 
-					delta *= (float)_tremaloDepth/(float)100;
+					delta *= (float)_modDepth/(float)100;
 					double offset = multiplier*(double)delta;
 					w = (uint16_t)((double)currentWavelength+offset);
 					if(w!=_wavelength) _setWavelength(w,false);
@@ -412,11 +412,11 @@ void WaveGen::_applyTremalo(){
 				
 
 			} 
-			else if(_tremaloWaveForm == MODWAVEFORM_SQUARE){ 
+			else if(_modWaveForm == MODWAVEFORM_SQUARE){ 
 
 				if(_modMode == MOD_VIBRATO){
 					float delta = (float)15; // for now, should be _volume, i believe..
-					delta *= (float)_tremaloDepth/(float)100;
+					delta *= (float)_modDepth/(float)100;
 
 					uint8_t v = _volume;
 
@@ -434,19 +434,19 @@ void WaveGen::_applyTremalo(){
 				}else{
 					if(!_arpDirectionAscend){ 
 						float delta = (float)(prevWavelength - currentWavelength);
-						delta *= (float)_tremaloDepth/(float)100;
+						delta *= (float)_modDepth/(float)100;
 						w = (uint16_t)((float)currentWavelength+delta); 
 					} 
 					//otherwise wavelength stays at root note
 					if(w!=_wavelength) _setWavelength(w,false);
 				}
 
-			}else if(_tremaloWaveForm == MODWAVEFORM_SAW){
+			}else if(_modWaveForm == MODWAVEFORM_SAW){
 				// do something
-			}else if(_tremaloWaveForm == MODWAVEFORM_NOISE){
+			}else if(_modWaveForm == MODWAVEFORM_NOISE){
 
 				float delta = (float)(prevWavelength - currentWavelength);
-				float adjustedDelta = delta * (float)_tremaloDepth/(float)100;
+				float adjustedDelta = delta * (float)_modDepth/(float)100;
 				float randomizedDelta = ((float)random(adjustedDelta*(float)100))/((float)100);
 
 				w = (uint16_t)((float)currentWavelength)+randomizedDelta; 

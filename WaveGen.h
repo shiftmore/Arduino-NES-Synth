@@ -70,15 +70,15 @@ class WaveGen {
 		unsigned long _timer_applyRelease;
 		unsigned long _cycle_applyRelease;
 
-		unsigned long _timer_applyTremalo;
-		unsigned long _cycle_applyTremalo;
+		unsigned long _timer_applyMod;
+		unsigned long _cycle_applyMod;
 		
 		uint8_t _LFOMode;
 		unsigned long _LFOMillis;
 		unsigned long _risingEdgeMicros;
 
-		uint8_t _tremaloDepth;
-		uint8_t _tremaloWaveForm;
+		uint8_t _modDepth;
+		uint8_t _modWaveForm;
 
 		uint8_t _arpNoteQueuePosition;
 		boolean _arpDirectionAscend; 
@@ -124,7 +124,7 @@ class WaveGen {
 		void _handleNoteStates();
 		
 
-		void _applyTremalo();
+		void _applyMod();
 
 		//unsigned long _cycleCheck(unsigned long, unsigned long);
 		bool _cycleCheck(unsigned long *, unsigned long);
@@ -132,7 +132,7 @@ class WaveGen {
 
 		void _runLFO();
 		void setLFOMillis(unsigned long);
-		unsigned long getTremaloCycle();
+		unsigned long getModCycle();
 		void createSortedQueues();
 	};
 
