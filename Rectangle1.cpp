@@ -17,7 +17,7 @@ void Rectangle1::_setWavelength(uint16_t newWavelength,bool force){
     //sendAddrData(0x07, highByte(wordVal)); 
 
 
-	if(force || _notesPressed == 0){  					// if there are no notes currently being played 
+	if(force || (_notesPressed == 0 && _noteState != NOTESTATE_RELEASE)){  					// if there are no notes currently being played (including release phase)
 		_sendAddrData(0x00, _getWaveDataMessage());
 		if(detunedWavelength != _wavelength) _sendAddrData(0x03, highByte(detunedWavelength));	// and set high byte directly only if the note has changed.. if we are in a long release, we don;t want to click..
 	}else{										// otherwise, the wave gen should already be running (we are ignoring velocity for now) and we need to use the frequency sweep to set the high byte to avoid the click..

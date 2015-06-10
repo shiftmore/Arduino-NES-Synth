@@ -9,7 +9,7 @@
  */
 void Rectangle2::_setWavelength(uint16_t newWavelength, bool force){
 		 
-	if(force || _notesPressed == 0){  					// if there are no notes currently being played 
+	if(force || (_notesPressed == 0 && _noteState != NOTESTATE_RELEASE)){  					// if there are no notes currently being played 
 		_sendAddrData(0x04, _getWaveDataMessage());
 		if(newWavelength != _wavelength) _sendAddrData(0x07, highByte(newWavelength));	// and set high byte directly
 	}else{										// otherwise, the wave gen should already be running (we are ignoring velocity for now) and we need to use the frequency sweep to set the high byte to avoid the click..

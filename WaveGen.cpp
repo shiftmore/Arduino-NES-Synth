@@ -25,9 +25,9 @@ void WaveGen::init(){
 	_timer_applyMod = 0;
 	_cycle_applyMod = 1000;
 
-	_modDepth = 5;
+	_modDepth = 0;
 	_modWaveForm = MODWAVEFORM_SQUARE;
-	_modMode = MOD_VIBRATO;
+	_modMode = MOD_TREMALO;
 
 	_noteOffset = 0;
 	_currentNote = 43; //midway
@@ -368,7 +368,7 @@ unsigned long WaveGen::getModCycle(){
 void WaveGen::_applyMod(){  
 	unsigned long cycle = getModCycle();
 	if(_cycleCheck(&_timer_applyMod, cycle)){
-		if(_notesPressed > 0 && _modDepth > 0){   
+		if(_noteState != NOTESTATE_OFF && _modDepth > 0){   
 
 			uint16_t currentWavelength = word(_getNoteHighByte(_currentNote),_getNoteLowByte(_currentNote));
 	 		//uint16_t nextWavelength = word(_getNoteHighByte(_currentNote+2),_getNoteLowByte(_currentNote+2));
@@ -428,7 +428,7 @@ void WaveGen::_applyMod(){
 
 					if(v!=_currentVolume){
 						_currentVolume = v;
-						if(_notesPressed > 0) 
+						if(_noteState != NOTESTATE_OFF) 
 							_sendWaveDataMessage();
 					}
 				}else{
